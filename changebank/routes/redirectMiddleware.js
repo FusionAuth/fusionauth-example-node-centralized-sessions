@@ -1,6 +1,15 @@
 const alwaysAllowed = [ "/logout", "/login", "/favicon.ico", "/stylesheets/style.css", "/endsession" ];
 const alwaysAllowedPrefix = [ "/oauth-redirect" ];
 
+const {FusionAuthClient} = require('@fusionauth/typescript-client');
+
+const dotenv = require('dotenv');
+dotenv.config();
+
+const apiKey = process.env.apiKey;
+const fusionAuthURL = process.env.fusionAuthURL;
+const client = new FusionAuthClient(apiKey, fusionAuthURL);
+
 const redirectFunction = ((req, res, next) => {
   console.log('url:', req.originalUrl);
   if (alwaysAllowed.indexOf(req.originalUrl) > -1 ) {
