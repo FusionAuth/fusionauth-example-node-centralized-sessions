@@ -50,7 +50,7 @@ router.use(redirectFunction);
 //tag::homepageroute[]
 /* GET home page. */
 router.get('/', function (req, res, next) {
-
+  //res.sendFile(path.join(__dirname, '../templates/home.html'));
   res.render('index', {user: req.session.user, title: title + ' App', clientId: clientId, logoutUrl: "/logout", loginUrl: loginUrl});
 });
 //end::homepageroute[]
@@ -65,8 +65,13 @@ router.get('/login', function (req, res, next) {
 //tag::logoutpageroute[]
 /* Logout page */
 router.get('/logout', function (req, res, next) {
-  req.session.user = null;
-  res.redirect(302, logoutUrl);
+  if (req.session.refreshTokenId) {
+    client.revokeRefreshTokenById(req.session.refreshTokenId)
+      .then((response) => {
+        req.session.user = null;
+        res.redirect(302, logoutUrl);
+      }).catch((err) => {console.log("in error"); console.error(JSON.stringify(err));});
+  }
 });
 //end::logoutpageroute[]
 
