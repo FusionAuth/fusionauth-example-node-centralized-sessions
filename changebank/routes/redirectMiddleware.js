@@ -27,8 +27,7 @@ const redirectFunction = ((req, res, next) => {
     return;
   }
 
-  //if (req.session && req.session.refreshTokenId) {
-    client.retrieveRefreshTokenById(req.session.refreshTokenId)
+  client.retrieveRefreshTokenById(req.session.refreshTokenId)
     .then(clientResponse => {
       console.log("valid session found");
       // console.log("RT:", JSON.stringify(clientResponse.response.refreshToken, null, 2));
@@ -37,17 +36,12 @@ const redirectFunction = ((req, res, next) => {
     }).catch(clientResponse => {
       console.log("here2 "+ req.originalUrl+ ", "+clientResponse.statusCode + ", " +req.session.refreshTokenId);
       if (clientResponse.statusCode !== 200) {
-        //session revoked 
-        //res.redirect(302, "/logout");
         console.log("session revoked");
         res.redirect(302, "/logout");
         next();
         return;
       }
     });
-  //} else {
-    // res.redirect(302, "/login");
-  //}
 });
 
 module.exports = redirectFunction;
