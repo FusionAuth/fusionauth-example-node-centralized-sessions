@@ -13,8 +13,11 @@ import * as dotenv from "dotenv";
 dotenv.config();
 
 const app = express();
+
 const port = 8081; // default port to listen
-const hostname = 'changebankforum.local'; // default port to listen
+const cbport = 8080; // default port for changebank
+const hostname = 'changebankforum.local'; // default hostname 
+const cbhostname = 'changebank.local'; // default changebank host 
 
 if (!process.env.clientId) {
   console.error('Missing clientId from .env');
@@ -96,7 +99,8 @@ app.get("/", async (req, res) => {
     const pkcePair = await pkceChallenge();
     res.cookie(userSession, { stateValue, verifier: pkcePair.code_verifier, challenge: pkcePair.code_challenge }, { httpOnly: true });
 
-    res.sendFile(path.join(__dirname, '../templates/home.html'));
+    // res.sendFile(path.join(__dirname, '../templates/home.html'));
+    res.redirect(302, '/forum');
   }
 });
 //end::homepage[]
@@ -189,7 +193,7 @@ app.get("/latest-posts", async (req, res) => {
 
 //tag::logout[]
 app.get('/logout', (req, res, next) => {
-  res.redirect(302, `${fusionAuthURL}/oauth2/logout?client_id=${clientId}`);
+  res.redirect('/endsession');
 });
 //end::logout[]
 
@@ -211,7 +215,8 @@ app.get('/endsession', async (req, res, next) => {
   res.clearCookie(userToken);
   res.clearCookie(userDetails);
 
-  res.redirect(302, '/')
+  // redirect back to changebank
+  res.redirect(302, 'http://'+cbhostname+':'+cbport+'/account')
 });
 
 // start the Express server
