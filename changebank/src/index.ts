@@ -2,7 +2,7 @@ import FusionAuthClient from "@fusionauth/typescript-client";
 import express from 'express';
 import cookieParser from 'cookie-parser';
 import pkceChallenge from 'pkce-challenge';
-import { GetPublicKeyOrSecret, verify } from 'jsonwebtoken';
+import { GetPublicKeyOrSecret, verify, JwtPayload } from 'jsonwebtoken';
 import jwksClient, { RsaSigningKey } from 'jwks-rsa';
 import * as path from 'path';
 import {redirectFunction} from './redirectMiddleware';
@@ -46,7 +46,28 @@ const validateUser = async (userTokenCookie: { access_token: string }) => {
   try {
     let decodedFromJwt;
     await verify(userTokenCookie.access_token, await getKey, undefined, (err, decoded) => {
-      decodedFromJwt = decoded;
+      decodedFromJwt = decoded as JwtPayload;
+      //console.log(decodedFromJwt);
+      if (!decodedFromJwt) {
+        console.error("Incorrect jwt after decoding");
+        decodedFromJwt = false;
+        return;
+      }
+      if (!decodedFromJwt.iss || decodedFromJwt.iss !== fusionAuthURL) {
+        console.error("Incorrect issuer");
+        decodedFromJwt = false;
+        return;
+      } 
+      if (!decodedFromJwt.aud || decodedFromJwt.aud !== clientId) {
+        console.error("Incorrect aud, token incorrect");
+        decodedFromJwt = false;
+        return;
+      } 
+      if (!decodedFromJwt.applicationId || decodedFromJwt.applicationId !== clientId) {
+        console.error("Incorrect applicationId, user not registered");
+        decodedFromJwt = false;
+        return;
+      } 
     });
     return decodedFromJwt;
   } catch (err) {
