@@ -13,8 +13,8 @@ import * as dotenv from "dotenv";
 dotenv.config();
 
 const app = express();
-const port = 8081; // default port to listen
-const hostname = 'changebankforum.local'; // default port to listen
+const port = 8080; // default port to listen
+const hostname = 'changebank.local'; // default port to listen
 
 if (!process.env.clientId) {
   console.error('Missing clientId from .env');
@@ -66,10 +66,10 @@ const getKey: GetPublicKeyOrSecret = async (header, callback) => {
 }
 
 // Cookie names
-const userSession = 'userSessionCBF';
-const userToken = 'userTokenCBF';
-const refreshToken = 'refreshTokenCBF';
-const userDetails = 'userDetailsCBF'; //Non Http-Only with user info (not trusted)
+const userSession = 'userSessionCB';
+const userToken = 'userTokenCB';
+const refreshToken = 'refreshTokenCB';
+const userDetails = 'userDetailsCB'; //Non Http-Only with user info (not trusted)
 
 const client = new FusionAuthClient(apiKey, fusionAuthURL);
 
@@ -90,7 +90,7 @@ app.use('/static', express.static(path.join(__dirname, '../static/')));
 app.get("/", async (req, res) => {
   const userTokenCookie = req.cookies[userToken];
   if (await validateUser(userTokenCookie)) {
-    res.redirect(302, '/forum');
+    res.redirect(302, '/account');
   } else {
     const stateValue = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
     const pkcePair = await pkceChallenge();
@@ -105,6 +105,7 @@ app.get("/", async (req, res) => {
 app.get('/login', (req, res, next) => {
   const userSessionCookie = req.cookies[userSession];
 
+  // TODO do we need to get this working right? that is, setting the values such that the user can go directly from cb to cbf and stay logged in?
   // Cookie was cleared, just send back (hacky way), that gets us the right PKCE value
   if (!userSessionCookie?.stateValue || !userSessionCookie?.challenge) {
     res.redirect(302, '/');
@@ -159,7 +160,7 @@ app.get('/oauth-redirect', async (req, res, next) => {
     }
     res.cookie(userDetails, userResponse.user);
 
-    res.redirect(302, '/forum');
+    res.redirect(302, '/account');
   } catch (err: any) {
     console.error(err);
     res.status(err?.statusCode || 500).json(JSON.stringify({
@@ -169,23 +170,67 @@ app.get('/oauth-redirect', async (req, res, next) => {
 });
 //end::oauth-redirect[]
 
-app.get("/forum", async (req, res) => {
+//tag::account[]
+app.get("/account", async (req, res) => {
   const userTokenCookie = req.cookies[userToken];
   if (!await validateUser(userTokenCookie)) {
     res.redirect(302, '/');
   } else {
-    res.sendFile(path.join(__dirname, '../templates/forum.html'));
+    res.sendFile(path.join(__dirname, '../templates/account.html'));
+  }
+});
+//end::account[]
+
+//tag::make-change[]
+app.get("/make-change", async (req, res) => {
+  const userTokenCookie = req.cookies[userToken];
+  if (!await validateUser(userTokenCookie)) {
+    res.redirect(302, '/');
+  } else {
+    res.sendFile(path.join(__dirname, '../templates/make-change.html'));
   }
 });
 
-app.get("/latest-posts", async (req, res) => {
+app.post("/make-change", async (req, res) => {
   const userTokenCookie = req.cookies[userToken];
   if (!await validateUser(userTokenCookie)) {
-    res.redirect(302, '/');
-  } else {
-    res.sendFile(path.join(__dirname, '../templates/latest-posts.html'));
+    res.status(403).json(JSON.stringify({
+      error: 'Unauthorized'
+    }))
+    return;
   }
+
+  let error;
+  let message;
+
+  var coins = {
+    quarters: 0.25,
+    dimes: 0.1,
+    nickels: 0.05,
+    pennies: 0.01,
+  };
+
+  try {
+    message = 'We can make change for';
+    let remainingAmount = +req.body.amount;
+    for (const [name, nominal] of Object.entries(coins)) {
+      let count = Math.floor(remainingAmount / nominal);
+      remainingAmount =
+        Math.round((remainingAmount - count * nominal) * 100) / 100;
+
+      message = `${message} ${count} ${name}`;
+    }
+    `${message}!`;
+  } catch (ex: any) {
+    error = `There was a problem converting the amount submitted. ${ex.message}`;
+  }
+  res.json(JSON.stringify({
+    error,
+    message
+  }))
+
 });
+//end::make-change[]
 
 //tag::logout[]
 app.get('/logout', (req, res, next) => {
@@ -197,9 +242,15 @@ app.get('/endsession', async (req, res, next) => {
   console.log('Ending session...')
   const refreshTokenId = req.cookies[refreshToken];
   console.log(refreshTokenId);
+
   if (refreshTokenId) {
     try {
-      await client.revokeRefreshTokenById(refreshTokenId);
+      const refreshTokenResponse = await client.retrieveRefreshTokenById(refreshTokenId);
+      const responseJSON = refreshTokenResponse.response;
+      if (responseJSON['refreshToken'] && responseJSON['refreshToken']['userId']) {
+        const userId = responseJSON['refreshToken']['userId'];
+        await client.revokeRefreshTokensByUserId(userId);
+      }
     } catch(err) {
       console.log("in error");
       console.error(JSON.stringify(err));

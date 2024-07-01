@@ -9,7 +9,7 @@ dotenv.config();
 const apiKey = process.env.apiKey;
 const fusionAuthURL = process.env.fusionAuthURL;
 const client = new FusionAuthClient(apiKey, fusionAuthURL);
-const refreshToken = 'refreshTokenCBF';
+const refreshToken = 'refreshTokenCB';
 
 /**
  * Redirect function

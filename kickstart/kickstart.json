@@ -24,7 +24,7 @@
     },
     {
       "key": "#{refreshTokenScopedApiKey}",
-      "description": "Restricted API key - only for Retrieve User",
+      "description": "Restricted API key - only for RT checking",
       "permissions": {
         "endpoints": {
           "/api/jwt/refresh": [
