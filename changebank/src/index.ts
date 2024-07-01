@@ -14,7 +14,7 @@ dotenv.config();
 
 const app = express();
 const port = 8080; // default port to listen
-const hostname = 'changebank.local'; // default port to listen
+const hostname = 'changebank.local'; // default hostname
 
 if (!process.env.clientId) {
   console.error('Missing clientId from .env');
@@ -105,7 +105,6 @@ app.get("/", async (req, res) => {
 app.get('/login', (req, res, next) => {
   const userSessionCookie = req.cookies[userSession];
 
-  // TODO do we need to get this working right? that is, setting the values such that the user can go directly from cb to cbf and stay logged in?
   // Cookie was cleared, just send back (hacky way), that gets us the right PKCE value
   if (!userSessionCookie?.stateValue || !userSessionCookie?.challenge) {
     res.redirect(302, '/');
