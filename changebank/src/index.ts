@@ -224,7 +224,6 @@ app.get('/logout', (req, res, next) => {
 app.get('/endsession', async (req, res, next) => {
   console.log('Ending session...')
   const refreshTokenId = req.cookies[refreshToken];
-  console.log(refreshTokenId);
 
   if (refreshTokenId) {
     try {
