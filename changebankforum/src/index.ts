@@ -1,4 +1,3 @@
-//tag::top[]
 import FusionAuthClient from "@fusionauth/typescript-client";
 import express from 'express';
 import cookieParser from 'cookie-parser';
@@ -80,16 +79,13 @@ app.use(cookieParser());
 /** Decode Form URL Encoded data */
 app.use(express.urlencoded());
 
+//tag::redirectmiddleware[]
 app.use(redirectFunction);
-
-//end::top[]
+//end::redirectmiddleware[]
 
 // Static Files
-//tag::static[]
 app.use('/static', express.static(path.join(__dirname, '../static/')));
-//end::static[]
 
-//tag::homepage[]
 app.get("/", async (req, res) => {
   const userTokenCookie = req.cookies[userToken];
   if (await validateUser(userTokenCookie)) {
@@ -103,9 +99,7 @@ app.get("/", async (req, res) => {
     res.redirect(302, '/forum');
   }
 });
-//end::homepage[]
 
-//tag::login[]
 app.get('/login', (req, res, next) => {
   const userSessionCookie = req.cookies[userSession];
 
@@ -117,9 +111,7 @@ app.get('/login', (req, res, next) => {
 
   res.redirect(302, `${fusionAuthURL}/oauth2/authorize?client_id=${clientId}&response_type=code&redirect_uri=http://${hostname}:${port}/oauth-redirect&state=${userSessionCookie?.stateValue}&code_challenge=${userSessionCookie?.challenge}&code_challenge_method=S256&scope=offline_access%20openid`)
 });
-//end::login[]
 
-//tag::oauth-redirect[]
 app.get('/oauth-redirect', async (req, res, next) => {
   // Capture query params
   const stateFromFusionAuth = `${req.query?.state}`;
@@ -171,7 +163,6 @@ app.get('/oauth-redirect', async (req, res, next) => {
     }))
   }
 });
-//end::oauth-redirect[]
 
 app.get("/forum", async (req, res) => {
   const userTokenCookie = req.cookies[userToken];
@@ -191,12 +182,11 @@ app.get("/latest-posts", async (req, res) => {
   }
 });
 
-//tag::logout[]
 app.get('/logout', (req, res, next) => {
   res.redirect('/endsession');
 });
-//end::logout[]
 
+//tag::endsession[]
 app.get('/endsession', async (req, res, next) => {
   console.log('Ending session...')
   const refreshTokenId = req.cookies[refreshToken];
@@ -218,10 +208,9 @@ app.get('/endsession', async (req, res, next) => {
   // redirect back to changebank
   res.redirect(302, 'http://'+cbhostname+':'+cbport+'/account')
 });
+//end::endsession[]
 
 // start the Express server
-//tag::app[]
 app.listen(port, () => {
   console.log(`server started at http://${hostname}:${port}`);
 });
-//end::app[]
