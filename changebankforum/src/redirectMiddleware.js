@@ -1,5 +1,5 @@
-const alwaysAllowed = [ "/logout", "/login", "/favicon.ico", "/stylesheets/style.css", "/endsession" ];
-const alwaysAllowedPrefix = [ "/oauth-redirect" ];
+const alwaysAllowed = [ "/logout", "/login", "/favicon.ico", "/endsession","/" ];
+const alwaysAllowedPrefix = [ "/oauth-redirect", "/static" ];
 
 const {FusionAuthClient} = require('@fusionauth/typescript-client');
 
@@ -9,48 +9,56 @@ dotenv.config();
 const apiKey = process.env.apiKey;
 const fusionAuthURL = process.env.fusionAuthURL;
 const client = new FusionAuthClient(apiKey, fusionAuthURL);
+const refreshToken = 'refreshToken';
 
-const redirectFunction = ((req, res, next) => {
-  console.log('url:', req.originalUrl);
+/**
+ * Redirect function
+ * @param {import('express').Request} req - The request object
+ * @param {import('express').Response} res - The response object
+ * @param {import('express').NextFunction} next - The next middleware function
+ */
+function redirectFunction(req, res, next) {
+  // console.log('url:', req.originalUrl);
   if (alwaysAllowed.indexOf(req.originalUrl) > -1 ) {
     // always allow this
-    console.log("always allowed1");
+    // console.log("always allowed1");
     next();
     return;
   }
 
   for (let i = 0; i < alwaysAllowedPrefix.length; i++) {
     let prefix = alwaysAllowedPrefix[i];
-    console.log(prefix);
+    // console.log(prefix);
     if (req.originalUrl.startsWith(prefix)) {
       // always allow this
-      console.log("always allowed2");
+      // console.log("always allowed2");
       next();
       return;
     }
   }
 
-  if (!req.session.refreshTokenId) {
-    console.log("no refresh token");
+  const refreshTokenId = req.cookies[refreshToken];
+  if (!refreshTokenId) {
+    // console.log("no refresh token");
     res.redirect(302, "/login");
     return;
   }
 
-  client.retrieveRefreshTokenById(req.session.refreshTokenId)
+  client.retrieveRefreshTokenById(refreshTokenId)
     .then(clientResponse => {
-      console.log("valid session found");
-      // console.log("RT:", JSON.stringify(clientResponse.response.refreshToken, null, 2));
+      // console.log("valid session found");
+//      console.log("RT:", JSON.stringify(clientResponse.response.refreshToken, null, 2));
       next();
       return;
     }).catch(clientResponse => {
-      console.log("here2 "+ req.originalUrl+ ", "+clientResponse.statusCode + ", " +req.session.refreshTokenId);
+      // console.log("here2 "+ req.originalUrl+ ", "+clientResponse.statusCode + ", " +refreshTokenId);
       if (clientResponse.statusCode !== 200) {
-        console.log("session revoked");
+        // console.log("session revoked");
         res.redirect(302, "/logout");
         next();
         return;
       }
     });
-});
+}
 
-module.exports = redirectFunction;
+module.exports = { redirectFunction };

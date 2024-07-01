@@ -6,6 +6,7 @@ import pkceChallenge from 'pkce-challenge';
 import { GetPublicKeyOrSecret, verify } from 'jsonwebtoken';
 import jwksClient, { RsaSigningKey } from 'jwks-rsa';
 import * as path from 'path';
+import {redirectFunction} from './redirectMiddleware';
 
 // Add environment variables
 import * as dotenv from "dotenv";
@@ -27,9 +28,15 @@ if (!process.env.fusionAuthURL) {
   console.error('Missing clientSecret from .env');
   process.exit();
 }
+if (!process.env.apiKey) {
+  console.error('Missing apiKey from .env');
+  process.exit();
+}
 const clientId = process.env.clientId;
 const clientSecret = process.env.clientSecret;
 const fusionAuthURL = process.env.fusionAuthURL;
+
+const apiKey = process.env.apiKey;
 
 // Validate the token signature, make sure it wasn't expired
 const validateUser = async (userTokenCookie: { access_token: string }) => {
@@ -49,7 +56,6 @@ const validateUser = async (userTokenCookie: { access_token: string }) => {
   }
 }
 
-
 const getKey: GetPublicKeyOrSecret = async (header, callback) => {
   const jwks = jwksClient({
     jwksUri: `${fusionAuthURL}/.well-known/jwks.json`
@@ -62,6 +68,7 @@ const getKey: GetPublicKeyOrSecret = async (header, callback) => {
 //Cookies
 const userSession = 'userSession';
 const userToken = 'userToken';
+const refreshToken = 'refreshToken';
 const userDetails = 'userDetails'; //Non Http-Only with user info (not trusted)
 
 const client = new FusionAuthClient('noapikeyneeded', fusionAuthURL);
@@ -69,6 +76,8 @@ const client = new FusionAuthClient('noapikeyneeded', fusionAuthURL);
 app.use(cookieParser());
 /** Decode Form URL Encoded data */
 app.use(express.urlencoded());
+
+app.use(redirectFunction);
 
 //end::top[]
 
@@ -101,7 +110,7 @@ app.get('/login', (req, res, next) => {
     res.redirect(302, '/');
   }
 
-  res.redirect(302, `${fusionAuthURL}/oauth2/authorize?client_id=${clientId}&response_type=code&redirect_uri=http://${hostname}:${port}/oauth-redirect&state=${userSessionCookie?.stateValue}&code_challenge=${userSessionCookie?.challenge}&code_challenge_method=S256`)
+  res.redirect(302, `${fusionAuthURL}/oauth2/authorize?client_id=${clientId}&response_type=code&redirect_uri=http://${hostname}:${port}/oauth-redirect&state=${userSessionCookie?.stateValue}&code_challenge=${userSessionCookie?.challenge}&code_challenge_method=S256&scope=offline_access%20openid`)
 });
 //end::login[]
 
@@ -127,6 +136,13 @@ app.get('/oauth-redirect', async (req, res, next) => {
       clientSecret,
       `http://${hostname}:${port}/oauth-redirect`,
       userSessionCookie.verifier)).response;
+
+    const refreshTokenId = accessToken.refresh_token_id;
+    if (!refreshTokenId) {
+      console.error('Failed to get Refresh Token')
+      return;
+    }
+    res.cookie(refreshToken, refreshTokenId, { httpOnly: true })
 
     if (!accessToken.access_token) {
       console.error('Failed to get Access Token')
@@ -176,8 +192,19 @@ app.get('/logout', (req, res, next) => {
 });
 //end::logout[]
 
-app.get('/endsession', (req, res, next) => {
+app.get('/endsession', async (req, res, next) => {
   console.log('Ending session...')
+  const refreshTokenId = req.cookies[refreshToken];
+  if (refreshTokenId) {
+    try {
+      await client.revokeRefreshTokenById(refreshTokenId);
+    } catch(err) {
+      console.log("in error");
+      console.error(JSON.stringify(err));
+    }
+  }
+
+  res.clearCookie(refreshToken);
   res.clearCookie(userSession);
   res.clearCookie(userToken);
   res.clearCookie(userDetails);
