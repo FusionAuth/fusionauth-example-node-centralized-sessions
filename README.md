@@ -1,6 +1,6 @@
-# FusionAuth Node.js SSO example
+# FusionAuth Node.js centralized sessions example
 
-This project is two simple example Node.js applications that illustrates how you can easily implement session using refresh tokens to give you fine grained revocation using FusionAuth.
+This project is two example Node.js applications that illustrates how you can easily implement sessions using refresh tokens to give you fine grained revocation using FusionAuth.
 
 ## Prerequisites
 
