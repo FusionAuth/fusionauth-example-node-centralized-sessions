@@ -21,17 +21,14 @@ function redirectFunction(req, res, next) {
   // console.log('url:', req.originalUrl);
   if (alwaysAllowed.indexOf(req.originalUrl) > -1 ) {
     // always allow this
-    // console.log("always allowed1");
     next();
     return;
   }
 
   for (let i = 0; i < alwaysAllowedPrefix.length; i++) {
     let prefix = alwaysAllowedPrefix[i];
-    // console.log(prefix);
     if (req.originalUrl.startsWith(prefix)) {
       // always allow this
-      // console.log("always allowed2");
       next();
       return;
     }
@@ -47,11 +44,9 @@ function redirectFunction(req, res, next) {
   client.retrieveRefreshTokenById(refreshTokenId)
     .then(clientResponse => {
       // console.log("valid session found");
-//      console.log("RT:", JSON.stringify(clientResponse.response.refreshToken, null, 2));
       next();
       return;
     }).catch(clientResponse => {
-      // console.log("here2 "+ req.originalUrl+ ", "+clientResponse.statusCode + ", " +refreshTokenId);
       if (clientResponse.statusCode !== 200) {
         // console.log("session revoked");
         res.redirect(302, "/logout");
