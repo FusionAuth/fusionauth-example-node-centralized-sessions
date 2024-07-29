@@ -53,7 +53,7 @@
       "tenantId": "#{defaultTenantId}",
       "body": {
         "application": {
-          "name": "Change Bank Centralized Session Example",
+          "name": "ChangeBank Centralized Session Example",
           "oauthConfiguration": {
             "authorizedRedirectURLs": [
               "http://changebank.local:8080/oauth-redirect"
@@ -81,7 +81,7 @@
       "tenantId": "#{defaultTenantId}",
       "body": {
         "application": {
-          "name": "Change Bank Forum Centralized Session Example",
+          "name": "ChangeBank Forum Centralized Session Example",
           "oauthConfiguration": {
             "authorizedRedirectURLs": [
               "http://changebankforum.local:8081/oauth-redirect"

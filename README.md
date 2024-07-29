@@ -23,13 +23,13 @@ Docker and the ability to edit your hostnames file.
 
 In an incognito window, go to `http://changebank.local:8080/` and login with `richard@example.com`. *Check 'keep me signed in'*.
 
-You'll be able to log into your Changebank account and make change. 
+You'll be able to log into your ChangeBank account and make change. 
 
 Now, say you want to discuss whether nickels are better than dimes? Head over to the forum by clicking on 'Forum' in the navigation. You'll be transparently logged in. 
 
 In the non-incognito window, log into the admin UI using the credentials above. You can then navigate to Richard's account (under 'Users') and view the 'Sessions' tab, which will show you the sessions.
 
-If you log out of Changebank Forum, you are only logged out of that application. If you log out of Changebank, the user is logged out of everything (all refresh tokens are revoked).
+If you log out of ChangeBank Forum, you are only logged out of that application. If you log out of ChangeBank, the user is logged out of everything (all refresh tokens are revoked).
 
 [Learn more about Logout and Session Management in FusionAuth](https://fusionauth.io/docs/lifecycle/authenticate-users/logout-session-management)
 
