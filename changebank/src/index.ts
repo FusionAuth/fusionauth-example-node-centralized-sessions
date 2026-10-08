@@ -124,7 +124,7 @@ app.get('/login', (req, res, next) => {
     return;
   }
 
-  res.redirect(302, `${fusionAuthURL}/oauth2/authorize?client_id=${clientId}&response_type=code&redirect_uri=http://${hostname}:${port}/oauth-redirect&state=${userSessionCookie?.stateValue}&code_challenge=${userSessionCookie?.challenge}&code_challenge_method=S256&scope=offline_access%20openid`)
+  res.redirect(302, `${fusionAuthURL}/oauth2/authorize?client_id=${clientId}&response_type=code&redirect_uri=http://${hostname}:${port}/oauth-redirect&state=${userSessionCookie?.stateValue}&code_challenge=${userSessionCookie?.challenge}&code_challenge_method=S256&scope=offline_access%20openid%20profile%20email`)
 });
 
 app.get('/oauth-redirect', async (req, res, next) => {
@@ -154,28 +154,31 @@ app.get('/oauth-redirect', async (req, res, next) => {
       console.error('Failed to get Refresh Token')
       return;
     }
-    res.cookie(refreshToken, refreshTokenId, { httpOnly: true })
 
     if (!accessToken.access_token) {
       console.error('Failed to get Access Token')
       return;
     }
-    res.cookie(userToken, accessToken, { httpOnly: true })
 
-    // Exchange Access Token for User
-    const userResponse = (await client.retrieveUserUsingJWT(accessToken.access_token)).response;
-    if (!userResponse?.user) {
+    // Retrieve the user's OpenID Connect claims using the access token
+    const userInfo = (await client.retrieveUserInfoFromAccessToken(accessToken.access_token)).response;
+    if (!userInfo?.sub) {
       console.error('Failed to get User from access token, redirecting home.');
-      res.redirect(302, '/');
+      return res.redirect(302, '/');
     }
-    res.cookie(userDetails, userResponse.user);
+    res.cookie(refreshToken, refreshTokenId, { httpOnly: true });
+    res.cookie(userToken, accessToken, { httpOnly: true });
+    res.cookie(userDetails, {
+      id: userInfo.sub,
+      email: userInfo.email,
+      firstName: userInfo.given_name,
+      lastName: userInfo.family_name
+    });
 
     res.redirect(302, '/account');
   } catch (err: any) {
-    console.error(err);
-    res.status(err?.statusCode || 500).json(JSON.stringify({
-      error: err
-    }))
+    console.error('OAuth callback failed:', err?.statusCode || err?.message);
+    res.status(502).send('Unable to sign in. Please try again.');
   }
 });
 
@@ -241,7 +244,6 @@ app.get('/logout', (req, res, next) => {
   res.redirect(302, `${fusionAuthURL}/oauth2/logout?client_id=${clientId}`);
 });
 
-//tag::endsession[]
 app.get('/endsession', async (req, res, next) => {
   console.log('Ending session...')
   const refreshTokenId = req.cookies[refreshToken];
@@ -267,7 +269,6 @@ app.get('/endsession', async (req, res, next) => {
 
   res.redirect(302, '/')
 });
-//end::endsession[]
 
 // start the Express server
 app.listen(port, () => {
